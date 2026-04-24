@@ -10,9 +10,11 @@ import {
   GraduationCap,
   Wand2,
   RefreshCcw,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import type { UserRole } from "@/components/RoleSelector";
 
 type Role = "user" | "assistant";
 type Msg = { role: Role; content: string };
@@ -20,31 +22,73 @@ type Msg = { role: Role; content: string };
 export type UserContext = {
   region?: string;
   firstTime?: boolean;
-  role?: string;
+  role?: UserRole | string;
   simpleMode?: boolean;
 };
 
-const STARTERS = [
-  { label: "Voting process", prompt: "Walk me through the voting process step-by-step." },
-  { label: "Election timeline", prompt: "What does a typical election cycle look like from start to finish?" },
-  { label: "How to register", prompt: "How do I register to vote? What do I need?" },
-  { label: "How to become a candidate", prompt: "What does it take to become a candidate in an election?" },
-];
-
-const FOLLOW_UPS = [
+const FALLBACK_FOLLOW_UPS = [
   "Explain elections like I'm 15",
   "What happens after voting ends?",
   "When should I register?",
   "How is my vote kept secret?",
 ];
 
+const STARTERS_BY_ROLE: Record<string, { label: string; prompt: string }[]> = {
+  voter: [
+    { label: "How do I register?", prompt: "How do I register to vote? What do I need?" },
+    { label: "What to expect on voting day", prompt: "What should I expect when I show up to vote in person for the first time?" },
+    { label: "Mail or in-person?", prompt: "What's the difference between voting by mail and in-person, and how do I decide?" },
+    { label: "How my vote stays secret", prompt: "How do elections keep my individual vote private and secure?" },
+  ],
+  candidate: [
+    { label: "Am I eligible to run?", prompt: "What are typical eligibility requirements to run for office?" },
+    { label: "Party vs. independent", prompt: "Should I run as a party candidate or as an independent? Pros and cons?" },
+    { label: "What paperwork do I file?", prompt: "What forms and paperwork does a first-time candidate usually file?" },
+    { label: "Building a small campaign", prompt: "How do first-time candidates build a small but effective campaign?" },
+  ],
+  volunteer: [
+    { label: "How can I help?", prompt: "What are the most common ways to volunteer in an election?" },
+    { label: "Becoming a poll worker", prompt: "Walk me through becoming a poll worker step-by-step." },
+    { label: "Staying neutral on duty", prompt: "Why do election volunteers have to stay neutral, and what does that mean in practice?" },
+    { label: "Reporting irregularities", prompt: "What should I do if I see something that looks wrong at a polling station?" },
+  ],
+  curious: [
+    { label: "How elections work, simply", prompt: "Explain how elections work like I'm 15." },
+    { label: "What's an election cycle?", prompt: "Walk me through what a typical election cycle looks like from start to finish." },
+    { label: "Why turnout matters", prompt: "Why does voter turnout matter and what affects it?" },
+    { label: "What's a recount?", prompt: "What is a recount and when does one happen?" },
+  ],
+  default: [
+    { label: "Voting process", prompt: "Walk me through the voting process step-by-step." },
+    { label: "Election timeline", prompt: "What does a typical election cycle look like from start to finish?" },
+    { label: "How to register", prompt: "How do I register to vote? What do I need?" },
+    { label: "How to become a candidate", prompt: "What does it take to become a candidate in an election?" },
+  ],
+};
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/election-chat`;
 
 interface ChatPanelProps {
   externalPrompt?: { text: string; nonce: number } | null;
+  externalContext?: UserContext;
 }
 
-export const ChatPanel = ({ externalPrompt }: ChatPanelProps) => {
+/** Strip the "### Next steps" trailing block so it doesn't render twice. */
+const stripNextSteps = (text: string) =>
+  text.replace(/\n*###\s*Next steps[\s\S]*$/i, "").trim();
+
+/** Pull "### Next steps" bullets out of a streamed AI message. */
+const parseNextSteps = (text: string): string[] => {
+  const m = text.match(/###\s*Next steps\s*\n([\s\S]*)$/i);
+  if (!m) return [];
+  return m[1]
+    .split("\n")
+    .map((l) => l.replace(/^\s*[-*•]\s*/, "").replace(/^["“]|["”]$/g, "").trim())
+    .filter((l) => l.length > 0 && l.length < 120)
+    .slice(0, 3);
+};
+
+export const ChatPanel = ({ externalPrompt, externalContext }: ChatPanelProps) => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,6 +97,13 @@ export const ChatPanel = ({ externalPrompt }: ChatPanelProps) => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Merge external context (region/role) into local context
+  useEffect(() => {
+    if (externalContext) {
+      setCtx((c) => ({ ...c, ...externalContext }));
+    }
+  }, [externalContext]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -206,6 +257,16 @@ export const ChatPanel = ({ externalPrompt }: ChatPanelProps) => {
     setInput("");
   };
 
+  const lastMessage = messages[messages.length - 1];
+  const aiSuggestions =
+    lastMessage?.role === "assistant" && !loading
+      ? parseNextSteps(lastMessage.content)
+      : [];
+  const quickReplies = aiSuggestions.length ? aiSuggestions : FALLBACK_FOLLOW_UPS;
+
+  const starterRole = (ctx.role as string) || "default";
+  const starters = STARTERS_BY_ROLE[starterRole] || STARTERS_BY_ROLE.default;
+
   return (
     <div className="flex flex-col h-full rounded-3xl border border-border bg-gradient-card shadow-elevated overflow-hidden">
       {/* Header */}
@@ -220,7 +281,13 @@ export const ChatPanel = ({ externalPrompt }: ChatPanelProps) => {
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="h-1.5 w-1.5 rounded-full bg-sage animate-pulse" />
-              <p className="text-[11px] text-muted-foreground">Friendly · Neutral · Always learning</p>
+              <p className="text-[11px] text-muted-foreground">
+                {ctx.region
+                  ? `Tutoring · ${ctx.region}`
+                  : ctx.role
+                  ? `Tutoring the ${ctx.role} path`
+                  : "Friendly · Neutral · Always learning"}
+              </p>
             </div>
           </div>
         </div>
@@ -264,7 +331,7 @@ export const ChatPanel = ({ externalPrompt }: ChatPanelProps) => {
                 Hi! I'm Ballot Buddy.
               </h2>
               <p className="text-ink-soft mt-2 text-sm md:text-base leading-relaxed">
-                I'll help you understand elections — step by step, in plain language.
+                I'll be your personal election tutor — step by step, in plain language.
                 <br />
                 What would you like to learn about?
               </p>
@@ -300,16 +367,13 @@ export const ChatPanel = ({ externalPrompt }: ChatPanelProps) => {
             </div>
 
             <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft mb-2 text-center">
-              Pick a topic to start
+              {ctx.role ? `Suggested for the ${ctx.role} path` : "Pick a topic to start"}
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {STARTERS.map((s) => (
+              {starters.map((s) => (
                 <button
                   key={s.label}
-                  onClick={() => {
-                    setCtx((c) => ({ ...c, role: s.label }));
-                    send(s.prompt);
-                  }}
+                  onClick={() => send(s.prompt)}
                   className="text-left rounded-xl border border-border bg-card hover:bg-secondary/60 hover:border-gold p-3 transition-smooth group"
                 >
                   <p className="font-semibold text-sm text-ink">{s.label}</p>
@@ -332,17 +396,28 @@ export const ChatPanel = ({ externalPrompt }: ChatPanelProps) => {
         )}
       </div>
 
-      {/* Quick replies */}
+      {/* Quick replies (AI-suggested next steps) */}
       {!showSetup && messages.length > 0 && !loading && (
-        <div className="px-4 md:px-6 pb-2 pt-1 border-t border-border bg-background/40">
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-thin py-2">
-            {FOLLOW_UPS.map((q) => (
+        <div className="px-4 md:px-6 pb-2 pt-2 border-t border-border bg-background/40">
+          {aiSuggestions.length > 0 && (
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold mb-1.5 px-1">
+              Suggested next steps
+            </p>
+          )}
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-thin pb-2">
+            {quickReplies.map((q) => (
               <button
                 key={q}
                 onClick={() => send(q)}
-                className="shrink-0 rounded-full border border-border bg-card hover:border-gold hover:bg-secondary/60 px-3 py-1.5 text-xs font-medium text-ink-soft transition-smooth"
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-smooth inline-flex items-center gap-1.5",
+                  aiSuggestions.length > 0
+                    ? "border-gold/60 bg-gold/10 text-ink hover:bg-gold/20"
+                    : "border-border bg-card text-ink-soft hover:border-gold hover:bg-secondary/60",
+                )}
               >
                 {q}
+                <ArrowRight className="h-3 w-3 opacity-60" />
               </button>
             ))}
           </div>
@@ -385,6 +460,7 @@ export const ChatPanel = ({ externalPrompt }: ChatPanelProps) => {
 
 const MessageBubble = ({ role, content }: { role: Role; content: string }) => {
   const isUser = role === "user";
+  const visibleContent = isUser ? content : stripNextSteps(content);
   return (
     <div className={cn("flex gap-3 animate-fade-in-up", isUser && "flex-row-reverse")}>
       <div
@@ -407,7 +483,7 @@ const MessageBubble = ({ role, content }: { role: Role; content: string }) => {
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
         ) : (
           <div className="prose-chat">
-            <ReactMarkdown>{content || "…"}</ReactMarkdown>
+            <ReactMarkdown>{visibleContent || "…"}</ReactMarkdown>
           </div>
         )}
       </div>
