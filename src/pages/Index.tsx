@@ -1,145 +1,168 @@
-import { useState } from "react";
-import { ChatPanel, type UserContext } from "@/components/ChatPanel";
-import { ElectionTimeline } from "@/components/ElectionTimeline";
-import { QuizMode } from "@/components/QuizMode";
-import { GuidedTutor } from "@/components/GuidedTutor";
-import { RoleSelector, ROLE_PROMPT_MAP, type UserRole } from "@/components/RoleSelector";
-import { Vote, BookOpen, MessagesSquare, GraduationCap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { SmartGuide, type UserContext } from "@/components/SmartGuide";
+import { ElectionChallenge } from "@/components/ElectionChallenge";
+import { LearningJourney } from "@/components/LearningJourney";
+import { CircularTimeline } from "@/components/CircularTimeline";
+import { ROLE_PROMPT_MAP, type UserRole } from "@/components/RoleSelector";
+import { Vote, Sparkles, RotateCw, Gamepad2, Bot, User, Clock, CheckCircle2 } from "lucide-react";
 
 const Index = () => {
-  const [externalPrompt, setExternalPrompt] = useState<{ text: string; nonce: number } | null>(null);
+  const [searchParams] = useSearchParams();
+  const userName = searchParams.get("name") || "Citizen";
+  const userAge = parseInt(searchParams.get("age") || "0");
+  
+  const [mode, setMode] = useState<"journey" | "explorer" | "challenge" | "guide">("journey");
+  const [booting, setBooting] = useState(true);
   const [role, setRole] = useState<UserRole | null>(null);
 
-  const askChat = (text: string) => {
-    setExternalPrompt({ text, nonce: Date.now() });
-    if (typeof window !== "undefined" && window.innerWidth < 1024) {
-      const el = document.getElementById("chat-section");
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => setBooting(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const handleRole = (r: UserRole) => {
-    setRole(r);
-    askChat(ROLE_PROMPT_MAP[r]);
+  const [externalPrompt, setExternalPrompt] = useState<{ text: string; nonce: number } | null>(null);
+
+  const askChat = (text: string) => {
+    setMode("guide");
+    setExternalPrompt({ text, nonce: Date.now() });
   };
 
   const externalContext: UserContext = role ? { role } : {};
 
+  // Calculate Voter Status
+  const isVoter = userAge >= 18;
+  const yearsToVote = 18 - userAge;
+  const yearsVoted = userAge - 18;
+
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b border-border bg-background/70 backdrop-blur sticky top-0 z-20">
-        <div className="container max-w-7xl flex items-center justify-between py-3.5">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-gradient-hero flex items-center justify-center shadow-card">
-              <Vote className="h-4 w-4 text-primary-foreground" strokeWidth={2.4} />
-            </div>
-            <div>
-              <p className="font-display text-lg font-semibold text-ink leading-none">
-                Ballot Buddy
-              </p>
-              <p className="text-[10.5px] uppercase tracking-[0.2em] text-gold mt-0.5 font-semibold">
-                Your friendly election tutor
-              </p>
-            </div>
+    <div className="fixed inset-0 bg-[#020617] text-white overflow-hidden flex flex-col font-sans">
+      {/* Top Notification Bar */}
+      <div className="relative z-30 bg-gold px-6 py-2 flex items-center justify-center gap-3 animate-in slide-in-from-top duration-700">
+        {isVoter ? (
+          <>
+            <CheckCircle2 className="h-4 w-4 text-navy" />
+            <p className="text-[10px] font-black text-navy uppercase tracking-widest">
+              Welcome back, {userName}. You have been an eligible voter for {yearsVoted} years.
+            </p>
+          </>
+        ) : (
+          <>
+            <Clock className="h-4 w-4 text-navy animate-pulse" />
+            <p className="text-[10px] font-black text-navy uppercase tracking-widest">
+              Hello {userName}. You have {yearsToVote} years to go until you can cast your first vote.
+            </p>
+          </>
+        )}
+      </div>
+
+      {booting && (
+        <div className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center p-8 text-center animate-out fade-out duration-1000 delay-1500">
+          <div className="w-64 h-1 bg-white/10 rounded-full overflow-hidden mb-4">
+            <div className="h-full bg-gold animate-draw-path" style={{ width: '100%', animationDuration: '2s' }} />
           </div>
-          <nav className="hidden md:flex items-center gap-5 text-sm text-ink-soft">
-            <a href="#lessons" className="hover:text-navy transition-colors flex items-center gap-1.5">
-              <GraduationCap className="h-3.5 w-3.5" />
-              Lessons
-            </a>
-            <a href="#timeline" className="hover:text-navy transition-colors flex items-center gap-1.5">
-              <BookOpen className="h-3.5 w-3.5" />
-              Timeline
-            </a>
-            <a href="#quiz" className="hover:text-navy transition-colors">
-              Quiz
-            </a>
-            <a href="#chat-section" className="hover:text-navy transition-colors flex items-center gap-1.5">
-              <MessagesSquare className="h-3.5 w-3.5" />
-              Ask
-            </a>
-          </nav>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gold animate-pulse">Initializing Civic_Sim...</p>
+          <div className="mt-8 space-y-1 text-[8px] font-mono text-white/30 text-left w-48">
+            <p className="">{'>'} Loading Protocol_Journey</p>
+            <p className="">{'>'} Syncing Orbital_Data</p>
+            <p className="">{'>'} Booting Expert_Guide_AI</p>
+          </div>
+        </div>
+      )}
+      {/* Simulator Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(51,65,85,0.1)_0,transparent_100%)]" />
+        <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] bg-navy rounded-full blur-[150px] animate-pulse" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-gold/10 rounded-full blur-[120px] animate-pulse delay-700" />
+      </div>
+
+      {/* HUD - Top Bar */}
+      <header className="relative z-20 flex items-center justify-between px-8 py-3 border-b border-white/5 bg-black/40 backdrop-blur-xl">
+        <div className="flex items-center gap-4 w-1/4">
+          <div className="h-9 w-9 rounded-xl bg-gradient-hero flex items-center justify-center shadow-card">
+            <Vote className="h-4 w-4 text-white" />
+          </div>
+          <div className="hidden lg:block">
+            <h1 className="font-display text-base font-bold tracking-tight">CIVIC_SIM</h1>
+            <p className="text-[8px] uppercase tracking-[0.3em] text-gold font-black opacity-80">Interactive Protocol</p>
+          </div>
+        </div>
+
+        {/* Centered Navigation Symbols */}
+        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10">
+          {[
+            { id: "journey", icon: Sparkles, label: "Journey" },
+            { id: "explorer", icon: RotateCw, label: "Explorer" },
+            { id: "challenge", icon: Gamepad2, label: "Challenge" },
+            { id: "guide", icon: Bot, label: "Guide" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setMode(item.id as any)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300",
+                mode === item.id ? "bg-white text-navy shadow-lg scale-105" : "text-white/40 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              <span className="text-[9px] font-black uppercase tracking-widest hidden md:inline">{item.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-end gap-6 w-1/4">
+          <div className="text-right hidden sm:block">
+            <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Rank</p>
+            <p className="text-[10px] font-bold text-gold">SCHOLAR</p>
+          </div>
+          <div className="text-right hidden sm:block">
+            <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Protocol XP</p>
+            <p className="text-[10px] font-bold text-white">1,240</p>
+          </div>
+          <div className="h-8 w-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+            <User className="h-4 w-4 text-white/60" />
+          </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="container max-w-7xl pt-10 md:pt-16 pb-6 md:pb-10">
-        <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 mb-5 shadow-soft">
-            <span className="h-1.5 w-1.5 rounded-full bg-sage animate-pulse" />
-            <p className="text-[11px] uppercase tracking-[0.2em] font-semibold text-ink-soft">
-              Non-partisan · Step-by-step · Beginner-friendly
-            </p>
-          </div>
-          <h1 className="font-display text-4xl md:text-6xl font-semibold text-ink leading-[1.05] tracking-tight">
-            A patient tutor for{" "}
-            <span className="italic text-navy">elections</span>,{" "}
-            <span className="relative inline-block">
-              <span className="relative z-10">step-by-step.</span>
-              <span className="absolute bottom-1 left-0 right-0 h-3 bg-gold/40 -z-0 rounded-sm" />
-            </span>
-          </h1>
-          <p className="mt-5 text-base md:text-lg text-ink-soft leading-relaxed max-w-2xl">
-            Pick your path, take a guided lesson, test what you've learned, and chat
-            with a friendly AI guide whenever you have a question. No jargon, no spin.
-          </p>
-        </div>
-      </section>
-
-      {/* Main grid */}
-      <main className="container max-w-7xl pb-16">
-        <div className="grid lg:grid-cols-5 gap-6">
-          {/* Left column — interactive learning */}
-          <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
-            <RoleSelector active={role} onChange={handleRole} />
-
-            <div id="lessons">
-              <GuidedTutor onAskChat={askChat} />
-            </div>
-
-            <div id="timeline">
-              <ElectionTimeline onAskAbout={askChat} />
-            </div>
-
-            <div id="quiz">
-              <QuizMode />
-            </div>
-
-            {/* Why this exists */}
-            <div className="rounded-3xl border border-border bg-gradient-hero text-primary-foreground p-6 md:p-7 shadow-elevated relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-gold/20 blur-2xl" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold-soft">
-                Why Ballot Buddy
-              </p>
-              <h3 className="font-display text-2xl font-semibold mt-1 leading-snug">
-                Civic literacy, without the lecture.
-              </h3>
-              <p className="text-sm mt-3 text-primary-foreground/85 leading-relaxed">
-                Elections shape our communities — but the rules can feel intimidating.
-                We keep things short, simple, and judgment-free, so you can show up
-                informed and confident.
-              </p>
-            </div>
-          </div>
-
-          {/* Right column — chat */}
-          <div
-            id="chat-section"
-            className="lg:col-span-3 order-1 lg:order-2 lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] min-h-[600px]"
-          >
-            <ChatPanel externalPrompt={externalPrompt} externalContext={externalContext} />
+      {/* Main Viewport - Extended */}
+      <main className="relative z-10 flex-1 overflow-hidden flex flex-col items-center">
+        <div className="w-full h-full flex flex-col">
+          <div className="flex-1 relative overflow-y-auto scrollbar-thin animate-in fade-in zoom-in-95 duration-700">
+            {mode === "journey" && (
+              <div className="min-h-full flex flex-col py-6 px-4 md:px-8">
+                <LearningJourney onAskAbout={askChat} />
+              </div>
+            )}
+            {mode === "explorer" && (
+              <div className="min-h-full flex flex-col py-6 px-4 md:px-8">
+                <CircularTimeline />
+              </div>
+            )}
+            {mode === "challenge" && (
+              <div className="min-h-full max-w-5xl mx-auto flex flex-col w-full py-6 px-4 md:px-8">
+                <ElectionChallenge />
+              </div>
+            )}
+            {mode === "guide" && (
+              <div className="h-full flex flex-col px-4 md:px-8 py-4">
+                <SmartGuide externalPrompt={externalPrompt} externalContext={externalContext} />
+              </div>
+            )}
           </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-background/60">
-        <div className="container max-w-7xl py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
-          <p>© Ballot Buddy — A neutral civic-education companion.</p>
-          <p className="italic">Always verify official details with your local election authority.</p>
+      {/* Global Status Elements */}
+      <div className="absolute right-8 bottom-8 z-20 pointer-events-none hidden lg:block opacity-50">
+        <div className="flex flex-col items-end gap-2">
+          <p className="text-[9px] font-bold text-gold tracking-[0.2em] uppercase">SYSTEM_STABLE</p>
+          <div className="h-1 w-24 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full bg-sage w-2/3 animate-pulse" />
+          </div>
         </div>
-      </footer>
+      </div>
     </div>
   );
 };
