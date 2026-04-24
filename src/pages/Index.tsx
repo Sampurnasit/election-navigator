@@ -1,20 +1,29 @@
 import { useState } from "react";
-import { ChatPanel } from "@/components/ChatPanel";
+import { ChatPanel, type UserContext } from "@/components/ChatPanel";
 import { ElectionTimeline } from "@/components/ElectionTimeline";
 import { QuizMode } from "@/components/QuizMode";
-import { Vote, BookOpen, MessagesSquare } from "lucide-react";
+import { GuidedTutor } from "@/components/GuidedTutor";
+import { RoleSelector, ROLE_PROMPT_MAP, type UserRole } from "@/components/RoleSelector";
+import { Vote, BookOpen, MessagesSquare, GraduationCap } from "lucide-react";
 
 const Index = () => {
   const [externalPrompt, setExternalPrompt] = useState<{ text: string; nonce: number } | null>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
 
   const askChat = (text: string) => {
     setExternalPrompt({ text, nonce: Date.now() });
-    // Smooth scroll to chat on small screens
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
       const el = document.getElementById("chat-section");
       el?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
+
+  const handleRole = (r: UserRole) => {
+    setRole(r);
+    askChat(ROLE_PROMPT_MAP[r]);
+  };
+
+  const externalContext: UserContext = role ? { role } : {};
 
   return (
     <div className="min-h-screen">
@@ -23,24 +32,28 @@ const Index = () => {
         <div className="container max-w-7xl flex items-center justify-between py-3.5">
           <div className="flex items-center gap-2.5">
             <div className="h-9 w-9 rounded-xl bg-gradient-hero flex items-center justify-center shadow-card">
-              <Vote className="h-4.5 w-4.5 text-primary-foreground" strokeWidth={2.4} />
+              <Vote className="h-4 w-4 text-primary-foreground" strokeWidth={2.4} />
             </div>
             <div>
               <p className="font-display text-lg font-semibold text-ink leading-none">
                 Ballot Buddy
               </p>
               <p className="text-[10.5px] uppercase tracking-[0.2em] text-gold mt-0.5 font-semibold">
-                Your friendly election guide
+                Your friendly election tutor
               </p>
             </div>
           </div>
           <nav className="hidden md:flex items-center gap-5 text-sm text-ink-soft">
+            <a href="#lessons" className="hover:text-navy transition-colors flex items-center gap-1.5">
+              <GraduationCap className="h-3.5 w-3.5" />
+              Lessons
+            </a>
             <a href="#timeline" className="hover:text-navy transition-colors flex items-center gap-1.5">
               <BookOpen className="h-3.5 w-3.5" />
               Timeline
             </a>
             <a href="#quiz" className="hover:text-navy transition-colors">
-              Election IQ
+              Quiz
             </a>
             <a href="#chat-section" className="hover:text-navy transition-colors flex items-center gap-1.5">
               <MessagesSquare className="h-3.5 w-3.5" />
@@ -56,19 +69,20 @@ const Index = () => {
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 mb-5 shadow-soft">
             <span className="h-1.5 w-1.5 rounded-full bg-sage animate-pulse" />
             <p className="text-[11px] uppercase tracking-[0.2em] font-semibold text-ink-soft">
-              Non-partisan · Beginner-friendly
+              Non-partisan · Step-by-step · Beginner-friendly
             </p>
           </div>
           <h1 className="font-display text-4xl md:text-6xl font-semibold text-ink leading-[1.05] tracking-tight">
-            Elections, finally <span className="italic text-navy">explained</span>{" "}
+            A patient tutor for{" "}
+            <span className="italic text-navy">elections</span>,{" "}
             <span className="relative inline-block">
-              <span className="relative z-10">simply.</span>
+              <span className="relative z-10">step-by-step.</span>
               <span className="absolute bottom-1 left-0 right-0 h-3 bg-gold/40 -z-0 rounded-sm" />
             </span>
           </h1>
           <p className="mt-5 text-base md:text-lg text-ink-soft leading-relaxed max-w-2xl">
-            From "how do I register" to "what happens after the ballots close" —
-            chat with a friendly AI guide, explore the cycle, and test what you've learned.
+            Pick your path, take a guided lesson, test what you've learned, and chat
+            with a friendly AI guide whenever you have a question. No jargon, no spin.
           </p>
         </div>
       </section>
@@ -76,11 +90,18 @@ const Index = () => {
       {/* Main grid */}
       <main className="container max-w-7xl pb-16">
         <div className="grid lg:grid-cols-5 gap-6">
-          {/* Left column — guides */}
+          {/* Left column — interactive learning */}
           <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
+            <RoleSelector active={role} onChange={handleRole} />
+
+            <div id="lessons">
+              <GuidedTutor onAskChat={askChat} />
+            </div>
+
             <div id="timeline">
               <ElectionTimeline onAskAbout={askChat} />
             </div>
+
             <div id="quiz">
               <QuizMode />
             </div>
@@ -107,7 +128,7 @@ const Index = () => {
             id="chat-section"
             className="lg:col-span-3 order-1 lg:order-2 lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] min-h-[600px]"
           >
-            <ChatPanel externalPrompt={externalPrompt} />
+            <ChatPanel externalPrompt={externalPrompt} externalContext={externalContext} />
           </div>
         </div>
       </main>
