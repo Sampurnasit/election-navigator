@@ -60,7 +60,7 @@ export const CircularTimeline = () => {
           <div className="w-full h-full rounded-full bg-navy-deep flex flex-col items-center justify-center p-4">
             <Calendar className="h-8 w-8 text-gold mb-2" />
             <span className="text-xs font-black tracking-[0.2em] uppercase text-gold/80">Election</span>
-            <span className="text-2xl font-display font-bold">2024</span>
+            <span className="text-2xl font-display font-bold">2026</span>
           </div>
         </div>
       </div>

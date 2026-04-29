@@ -41,7 +41,7 @@ export const LearningJourney = ({ onAskAbout }: LearningJourneyProps) => {
   const activeData = activeNode !== null ? TIMELINE[activeNode] : null;
 
   return (
-    <div className="relative w-full overflow-hidden bg-gradient-to-br from-background to-secondary/30 rounded-[2.5rem] border border-border shadow-elevated p-8 min-h-[600px] flex flex-col">
+    <div className="relative w-full overflow-hidden bg-gradient-to-br from-sky-50 to-blue-50 rounded-[2.5rem] border border-blue-100 shadow-elevated p-8 min-h-[600px] flex flex-col">
       {/* Background decoration */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden opacity-20">
         <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-gold rounded-full blur-[120px]" />
