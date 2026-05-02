@@ -6,14 +6,15 @@ import { ElectionChallenge } from "@/components/ElectionChallenge";
 import { LearningJourney } from "@/components/LearningJourney";
 import { CircularTimeline } from "@/components/CircularTimeline";
 import { ROLE_PROMPT_MAP, type UserRole } from "@/components/RoleSelector";
-import { Vote, Sparkles, RotateCw, Gamepad2, Bot, User, Clock, CheckCircle2 } from "lucide-react";
+import { PollMap } from "@/components/PollMap";
+import { Vote, Sparkles, RotateCw, Gamepad2, Bot, User, Clock, CheckCircle2, MapPin } from "lucide-react";
 
 const Index = () => {
   const [searchParams] = useSearchParams();
   const userName = searchParams.get("name") || "Citizen";
   const userAge = parseInt(searchParams.get("age") || "0");
   
-  const [mode, setMode] = useState<"journey" | "explorer" | "challenge" | "guide">("journey");
+  const [mode, setMode] = useState<"journey" | "explorer" | "challenge" | "guide" | "locator">("journey");
   const [booting, setBooting] = useState(true);
   const [role, setRole] = useState<UserRole | null>(null);
 
@@ -94,6 +95,7 @@ const Index = () => {
           {[
             { id: "journey", icon: Sparkles, label: "Journey" },
             { id: "explorer", icon: RotateCw, label: "Explorer" },
+            { id: "locator", icon: MapPin, label: "Locator" },
             { id: "challenge", icon: Gamepad2, label: "Challenge" },
             { id: "guide", icon: Bot, label: "Guide" },
           ].map((item) => (
@@ -148,6 +150,17 @@ const Index = () => {
             {mode === "guide" && (
               <div className="h-full flex flex-col px-4 md:px-8 py-4">
                 <SmartGuide externalPrompt={externalPrompt} externalContext={externalContext} />
+              </div>
+            )}
+            {mode === "locator" && (
+              <div className="min-h-full max-w-4xl mx-auto flex flex-col w-full py-12 px-4 md:px-8">
+                <div className="mb-8 text-center">
+                  <h2 className="text-3xl font-display font-bold mb-2 text-white">Station <span className="text-gold">Locator</span></h2>
+                  <p className="text-sm text-white/40 uppercase tracking-widest">Find your nearest official polling place</p>
+                </div>
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
+                   <PollMap />
+                </div>
               </div>
             )}
           </div>

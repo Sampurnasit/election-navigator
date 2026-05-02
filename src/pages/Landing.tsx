@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Vote, ArrowRight, User, Mail, Phone, Calendar, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/integrations/firebase";
 
 export const Landing = () => {
   const navigate = useNavigate();
@@ -19,11 +20,11 @@ export const Landing = () => {
     
     // Simulate system verification
     setTimeout(() => {
-      const age = parseInt(formData.age);
       const params = new URLSearchParams({
         name: formData.name,
         age: formData.age
       });
+      trackEvent("landing_registration_complete", { age: formData.age });
       navigate(`/simulator?${params.toString()}`);
     }, 1500);
   };
@@ -123,6 +124,7 @@ export const Landing = () => {
 
             <button
               disabled={isSubmitting}
+              aria-label={isSubmitting ? "Verifying protocols" : "Initialize election simulator"}
               className={cn(
                 "w-full py-5 rounded-2xl font-black text-navy transition-all flex items-center justify-center gap-3 mt-8 shadow-xl",
                 isSubmitting ? "bg-white/20 cursor-not-allowed" : "bg-gold hover:bg-gold-soft hover:scale-[1.02] active:scale-95"
@@ -130,13 +132,13 @@ export const Landing = () => {
             >
               {isSubmitting ? (
                 <>
-                  <div className="h-5 w-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+                  <div className="h-5 w-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" aria-hidden="true" />
                   VERIFYING PROTOCOLS...
                 </>
               ) : (
                 <>
                   INITIALIZE SIMULATOR
-                  <ArrowRight className="h-5 w-5" />
+                  <ArrowRight className="h-5 w-5" aria-hidden="true" />
                 </>
               )}
             </button>

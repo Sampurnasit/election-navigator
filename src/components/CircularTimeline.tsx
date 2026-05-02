@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { TIMELINE, type TimelinePhase } from "@/data/timeline";
 import { cn } from "@/lib/utils";
+import { analytics, trackEvent } from "@/integrations/firebase";
 import { 
   AlertCircle, 
   ChevronLeft, 
@@ -31,6 +32,12 @@ export const CircularTimeline = () => {
     // Calculate the shortest rotation path
     const diff = index - activeIndex;
     setRotation(rotation - (diff * (360 / totalPhases)));
+    
+    // Track interaction
+    trackEvent("timeline_phase_change", { 
+      phase_id: TIMELINE[index].id,
+      phase_index: index 
+    });
   };
 
   const next = () => rotateTo((activeIndex + 1) % totalPhases);
@@ -58,7 +65,7 @@ export const CircularTimeline = () => {
       <div className="relative z-10 flex flex-col items-center text-center transition-transform duration-700 hover:scale-110">
         <div className="w-40 h-40 rounded-full bg-gradient-to-br from-gold via-accent to-gold p-1 shadow-[0_0_80px_rgba(251,191,36,0.4)] animate-pulse">
           <div className="w-full h-full rounded-full bg-navy-deep flex flex-col items-center justify-center p-4">
-            <Calendar className="h-8 w-8 text-gold mb-2" />
+            <Calendar className="h-8 w-8 text-gold mb-2" aria-hidden="true" />
             <span className="text-xs font-black tracking-[0.2em] uppercase text-gold/80">Election</span>
             <span className="text-2xl font-display font-bold">2026</span>
           </div>
@@ -66,9 +73,10 @@ export const CircularTimeline = () => {
       </div>
 
       {/* Orbiting Nodes */}
-      <div 
+      <nav 
         className="absolute w-[450px] h-[450px] transition-transform duration-1000 cubic-bezier(0.22, 1, 0.36, 1)"
         style={{ transform: `rotate(${rotation}deg)` }}
+        aria-label="Election Phase Navigation"
       >
         {TIMELINE.map((phase, i) => {
           const angle = (i * (360 / totalPhases)) - 90; // Start at top
@@ -89,6 +97,8 @@ export const CircularTimeline = () => {
             >
               <button
                 onClick={() => rotateTo(i)}
+                aria-label={`Go to ${phase.title} phase`}
+                aria-current={isActive ? "step" : undefined}
                 className={cn(
                   "group relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500",
                   isActive 
@@ -96,7 +106,7 @@ export const CircularTimeline = () => {
                     : "bg-white/10 text-white hover:bg-white/20 border border-white/20"
                 )}
               >
-                <Icon className={cn("h-6 w-6 transition-transform", isActive ? "scale-110" : "group-hover:scale-110")} />
+                <Icon className={cn("h-6 w-6 transition-transform", isActive ? "scale-110" : "group-hover:scale-110")} aria-hidden="true" />
                 
                 {/* Connector Line to center */}
                 <div 
@@ -119,7 +129,7 @@ export const CircularTimeline = () => {
             </div>
           );
         })}
-      </div>
+      </nav>
 
       {/* Floating Info Card */}
       <div className="absolute right-12 top-1/2 -translate-y-1/2 w-80 z-20">
@@ -149,10 +159,14 @@ export const CircularTimeline = () => {
 
           <div className="mt-8 flex gap-2">
             <button 
-              onClick={() => setShowWarning(true)}
+              onClick={() => {
+                setShowWarning(true);
+                trackEvent("timeline_consequence_view", { phase_id: activePhase.id });
+              }}
+              aria-label={`View consequences of missing the ${activePhase.title} phase`}
               className="flex-1 py-2.5 px-4 bg-rose/20 hover:bg-rose/30 text-rose-300 text-xs font-bold rounded-xl border border-rose/30 transition-all flex items-center justify-center gap-2 group"
             >
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
               What if I miss this?
             </button>
           </div>
@@ -160,8 +174,12 @@ export const CircularTimeline = () => {
 
         {/* Navigation Controls */}
         <div className="mt-6 flex items-center justify-between">
-          <button onClick={prev} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10">
-            <ChevronLeft className="h-5 w-5" />
+          <button 
+            onClick={prev} 
+            aria-label="Previous phase"
+            className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"
+          >
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
           </button>
           <div className="flex gap-1.5">
             {TIMELINE.map((_, i) => (
@@ -174,8 +192,12 @@ export const CircularTimeline = () => {
               />
             ))}
           </div>
-          <button onClick={next} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10">
-            <ChevronRight className="h-5 w-5" />
+          <button 
+            onClick={next} 
+            aria-label="Next phase"
+            className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"
+          >
+            <ChevronRight className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -187,9 +209,10 @@ export const CircularTimeline = () => {
           <div className="relative w-full max-w-md bg-rose-950 border border-rose-500/30 rounded-[2rem] p-8 shadow-[0_0_50px_rgba(244,63,94,0.2)]">
             <button 
               onClick={() => setShowWarning(false)}
+              aria-label="Close consequences modal"
               className="absolute top-6 right-6 p-2 hover:bg-white/10 rounded-full transition-colors"
             >
-              <X className="h-5 w-5" />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
             
             <div className="flex flex-col items-center text-center">

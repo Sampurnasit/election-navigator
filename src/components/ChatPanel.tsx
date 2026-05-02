@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { trackEvent } from "@/integrations/firebase";
 import type { UserRole } from "@/components/RoleSelector";
 
 type Role = "user" | "assistant";
@@ -128,6 +129,11 @@ export const ChatPanel = ({ externalPrompt, externalContext }: ChatPanelProps) =
     setMessages(next);
     setInput("");
     setLoading(true);
+    
+    trackEvent("ai_chat_message_sent", { 
+      role: ctx.role || "unknown",
+      has_region: !!ctx.region 
+    });
 
     let assistantSoFar = "";
     const upsert = (chunk: string) => {
@@ -432,6 +438,7 @@ export const ChatPanel = ({ externalPrompt, externalContext }: ChatPanelProps) =
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKey}
+            aria-label="Ask about elections"
             placeholder="Ask anything about elections…"
             rows={1}
             className="flex-1 bg-transparent resize-none text-sm text-ink placeholder:text-muted-foreground focus:outline-none py-1.5 max-h-32"
