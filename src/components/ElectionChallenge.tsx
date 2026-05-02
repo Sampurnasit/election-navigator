@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   ShieldCheck
 } from "lucide-react";
+import { trackEvent } from "@/integrations/firebase";
 
 export const ElectionChallenge = () => {
   const [gameState, setGameState] = useState<"start" | "playing" | "results">("start");
@@ -37,9 +38,11 @@ export const ElectionChallenge = () => {
       setScore((s) => s + 100 + (streak * 20));
       setStreak((s) => s + 1);
       setFeedback("correct");
+      trackEvent("challenge_answer", { status: "correct", question_idx: currentIdx });
     } else {
       setStreak(0);
       setFeedback("incorrect");
+      trackEvent("challenge_answer", { status: "incorrect", question_idx: currentIdx });
     }
   };
 
@@ -90,6 +93,7 @@ export const ElectionChallenge = () => {
           </p>
 
           <button 
+            aria-label="Initiate Challenge"
             onClick={() => setGameState("playing")}
             className="group relative px-12 py-6 bg-gold hover:bg-gold-soft text-navy font-black text-xl rounded-2xl transition-all shadow-[0_0_40px_rgba(234,179,8,0.3)] hover:scale-105 active:scale-95 animate-fade-in-up delay-300"
           >
@@ -141,13 +145,14 @@ export const ElectionChallenge = () => {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button 
+            aria-label="Reboot Arena"
             onClick={restart}
             className="px-10 py-5 bg-white text-navy font-black rounded-2xl hover:bg-gold hover:text-navy transition-all flex items-center justify-center gap-3 shadow-xl"
           >
             <RotateCcw className="h-5 w-5" />
             REBOOT ARENA
           </button>
-          <button className="px-10 py-5 bg-transparent border-2 border-white/10 text-white font-black rounded-2xl hover:bg-white/5 transition-all flex items-center justify-center gap-3">
+          <button aria-label="Log Results" className="px-10 py-5 bg-transparent border-2 border-white/10 text-white font-black rounded-2xl hover:bg-white/5 transition-all flex items-center justify-center gap-3">
             LOG RESULTS
           </button>
         </div>
@@ -218,6 +223,7 @@ export const ElectionChallenge = () => {
               return (
                 <button
                   key={i}
+                  aria-label={`Select option: ${option}`}
                   onClick={() => handleAnswer(i)}
                   disabled={showResult}
                   className={cn(

@@ -1,13 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PollMap } from "../components/PollMap";
-
-// Mock the Google Maps SDK
-vi.mock("@react-google-maps/api", () => ({
-  GoogleMap: ({ children }: any) => <div data-testid="google-map">{children}</div>,
-  useJsApiLoader: () => ({ isLoaded: true }),
-  Marker: ({ onClick }: any) => <div data-testid="map-marker" onClick={onClick} />,
-}));
+import { trackEvent } from "@/integrations/firebase";
 
 // Mock the firebase integration
 vi.mock("@/integrations/firebase", () => ({
@@ -15,21 +9,31 @@ vi.mock("@/integrations/firebase", () => ({
 }));
 
 describe("PollMap Component", () => {
-  it("renders the map title", () => {
+  beforeEach(() => {
+    // Mock window.open
+    global.window.open = vi.fn();
+    vi.clearAllMocks();
+  });
+
+  it("renders the locator title and description", () => {
     render(<PollMap />);
+    expect(screen.getByText(/Polling Station Locator/i)).toBeDefined();
     expect(screen.getByText(/Find Your Polling Station/i)).toBeDefined();
+    expect(screen.getByText(/Search by EPIC/i)).toBeDefined();
   });
 
-  it("renders markers for polling stations", () => {
+  it("triggers redirect and tracking when ECI portal button is clicked", () => {
     render(<PollMap />);
-    const markers = screen.getAllByTestId("map-marker");
-    expect(markers.length).toBeGreaterThan(0);
-  });
-
-  it("shows details when a marker is clicked", () => {
-    render(<PollMap />);
-    const markers = screen.getAllByTestId("map-marker");
-    fireEvent.click(markers[0]);
-    expect(screen.getByText(/Get Directions/i)).toBeDefined();
+    
+    const button = screen.getByText(/Visit Official ECI Portal/i);
+    fireEvent.click(button);
+    
+    expect(trackEvent).toHaveBeenCalledWith("eci_portal_redirect");
+    expect(global.window.open).toHaveBeenCalledWith(
+      "https://electoralsearch.eci.gov.in/",
+      "_blank",
+      "noopener,noreferrer"
+    );
   });
 });
+

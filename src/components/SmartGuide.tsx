@@ -80,6 +80,7 @@ export const SmartGuide = ({ externalPrompt, externalContext }: SmartGuideProps)
     if (externalPrompt?.text) {
       send(externalPrompt.text);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalPrompt?.nonce]);
 
   const send = async (text: string) => {
@@ -130,7 +131,7 @@ export const SmartGuide = ({ externalPrompt, externalContext }: SmartGuideProps)
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        let lines = buffer.split("\n");
+        const lines = buffer.split("\n");
         buffer = lines.pop() || "";
         for (const line of lines) {
           if (line.startsWith("data: ")) {
@@ -140,7 +141,9 @@ export const SmartGuide = ({ externalPrompt, externalContext }: SmartGuideProps)
               const parsed = JSON.parse(json);
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) upsert(content);
-            } catch {}
+            } catch (err) {
+              console.error(err);
+            }
           }
         }
       }
@@ -157,12 +160,14 @@ export const SmartGuide = ({ externalPrompt, externalContext }: SmartGuideProps)
       toast({ title: "Voice not supported", description: "Your browser doesn't support voice input." });
       return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognition = new (window as any).webkitSpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
 
     recognition.onstart = () => setIsListening(true);
     recognition.onend = () => setIsListening(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setInput(transcript);
@@ -188,10 +193,10 @@ export const SmartGuide = ({ externalPrompt, externalContext }: SmartGuideProps)
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setMessages([])} className="p-3 hover:bg-white/10 rounded-xl transition-colors">
+          <button aria-label="Reset Chat" onClick={() => setMessages([])} className="p-3 hover:bg-white/10 rounded-xl transition-colors">
             <RefreshCcw className="h-5 w-5 opacity-60" />
           </button>
-          <button className="p-3 hover:bg-white/10 rounded-xl transition-colors">
+          <button aria-label="Maximize Chat" className="p-3 hover:bg-white/10 rounded-xl transition-colors">
             <Maximize2 className="h-5 w-5 opacity-60" />
           </button>
         </div>
@@ -244,6 +249,7 @@ export const SmartGuide = ({ externalPrompt, externalContext }: SmartGuideProps)
       <div className="p-6 bg-gradient-to-t from-background to-transparent">
         <div className="relative flex items-center gap-3 bg-white border border-border focus-within:border-gold shadow-card rounded-[1.5rem] px-4 py-2 transition-all">
           <button 
+            aria-label={isListening ? "Stop listening" : "Start voice input"}
             onClick={toggleListen}
             className={cn(
               "h-10 w-10 rounded-2xl flex items-center justify-center transition-all",
@@ -262,6 +268,7 @@ export const SmartGuide = ({ externalPrompt, externalContext }: SmartGuideProps)
             rows={1}
           />
           <button 
+            aria-label="Send message"
             onClick={() => send(input)}
             disabled={!input.trim() || loading}
             className="h-10 w-10 bg-navy text-white rounded-2xl flex items-center justify-center hover:bg-navy-deep disabled:opacity-50 transition-all"

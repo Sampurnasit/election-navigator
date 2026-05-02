@@ -14,7 +14,8 @@ const Index = () => {
   const userName = searchParams.get("name") || "Citizen";
   const userAge = parseInt(searchParams.get("age") || "0");
   
-  const [mode, setMode] = useState<"journey" | "explorer" | "challenge" | "guide" | "locator">("journey");
+  type AppMode = "journey" | "explorer" | "challenge" | "guide" | "locator";
+  const [mode, setMode] = useState<AppMode>("journey");
   const [booting, setBooting] = useState(true);
   const [role, setRole] = useState<UserRole | null>(null);
 
@@ -101,7 +102,7 @@ const Index = () => {
           ].map((item) => (
             <button
               key={item.id}
-              onClick={() => setMode(item.id as any)}
+              onClick={() => setMode(item.id as AppMode)}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300",
                 mode === item.id ? "bg-white text-navy shadow-lg scale-105" : "text-white/40 hover:text-white hover:bg-white/5"
